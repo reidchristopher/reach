@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(reach_core)
 
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++17)
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_ros REQUIRED)
