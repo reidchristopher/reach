@@ -140,6 +140,13 @@ int main(int argc, char** argv) {
     return -1;
   }
 
+  // keep server alive
+  rclcpp::Rate status_check_rate(1);
+  while (rclcpp::ok())
+  {
+    status_check_rate.sleep();
+  }
+
   rclcpp::shutdown();
   t1.join();
 
