@@ -53,27 +53,28 @@ def generate_launch_description():
                               description="Launch RViz?")
     )
     declared_arguments.append(
-        DeclareLaunchArgument("xacro_file",
+        DeclareLaunchArgument("robot_description_file",
                               default_value="reach_study.xacro",
                               description="Xacro file to parse.")
     )
     declared_arguments.append(
-        DeclareLaunchArgument("moveit_config_file",
+        DeclareLaunchArgument("robot_semantic_file",
                               default_value="reach_study.srdf.xacro",
                               description="Moveit config xacro file to parse.")
     )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "controllers_file",
-            default_value="controllers.yaml",
-            description="YAML file with the controllers configuration.",
-        )
-    )
+    # declared_arguments.append(
+    #     DeclareLaunchArgument(
+    #         "controllers_file",
+    #         default_value="controllers.yaml",
+    #         description="YAML file with the controllers configuration.",
+    #     )
+    # )
 
     parameters_package = LaunchConfiguration("parameters_package")
     parameters_filename = LaunchConfiguration("parameters_filename")
-    moveit_config_file = LaunchConfiguration("moveit_config_file")
-    controllers_file = LaunchConfiguration("controllers_file")
+    robot_description_file = LaunchConfiguration("robot_description_file")
+    robot_semantic_file = LaunchConfiguration("robot_semantic_file")
+    # controllers_file = LaunchConfiguration("controllers_file")
 
     study_parameters = PathJoinSubstitution(
         [FindPackageShare(parameters_package), "config", parameters_filename]
@@ -83,7 +84,7 @@ def generate_launch_description():
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
             PathJoinSubstitution(
-                [FindPackageShare("reach_demo"), "model", LaunchConfiguration("xacro_file")]
+                [FindPackageShare("reach_demo"), "model", LaunchConfiguration("robot_description_file")]
             ),
         ]
     )
@@ -93,14 +94,14 @@ def generate_launch_description():
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
             PathJoinSubstitution(
-                [FindPackageShare("reach_demo"), "model", moveit_config_file]
+                [FindPackageShare("reach_demo"), "model", robot_semantic_file]
             ),
         ]
     )
 
-    controllers = PathJoinSubstitution(
-        [FindPackageShare(parameters_package), "model/motoman_sia20d/config", controllers_file]
-    )
+    # controllers = PathJoinSubstitution(
+    #     [FindPackageShare(parameters_package), "model/motoman_sia20d/config", controllers_file]
+    # )
 
     kinematics_yaml = load_yaml("reach_demo", "model/motoman_sia20d/config/kinematics.yaml")
     robot_description = {"robot_description": robot_description_content}
@@ -120,21 +121,21 @@ def generate_launch_description():
         ],
     )
 
-    control_node = Node(
-        package="controller_manager",
-        executable="ros2_control_node",
-        parameters=[robot_description, controllers],
-        output={
-            "stdout": "screen",
-            "stderr": "screen",
-        },
-    )
+    # control_node = Node(
+    #     package="controller_manager",
+    #     executable="ros2_control_node",
+    #     parameters=[robot_description, controllers],
+    #     output={
+    #         "stdout": "screen",
+    #         "stderr": "screen",
+    #     },
+    # )
 
-    joint_state_broadcaster_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
-    )
+    # joint_state_broadcaster_spawner = Node(
+    #     package="controller_manager",
+    #     executable="spawner.py",
+    #     arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+    # )
 
     robot_state_publisher_node = Node(
         package="robot_state_publisher",
@@ -143,57 +144,57 @@ def generate_launch_description():
         parameters=[robot_description],
     )
 
-    trajectory_execution = {
-        "moveit_manage_controllers": True,
-        "trajectory_execution.allowed_execution_duration_scaling": 1.2,
-        "trajectory_execution.allowed_goal_duration_margin": 0.5,
-        "trajectory_execution.allowed_start_tolerance": 0.01,
-    }
+    # trajectory_execution = {
+    #     "moveit_manage_controllers": True,
+    #     "trajectory_execution.allowed_execution_duration_scaling": 1.2,
+    #     "trajectory_execution.allowed_goal_duration_margin": 0.5,
+    #     "trajectory_execution.allowed_start_tolerance": 0.01,
+    # }
 
-    planning_scene_monitor_parameters = {
-        "publish_planning_scene": True,
-        "publish_geometry_updates": True,
-        "publish_state_updates": True,
-        "publish_transforms_updates": True,
-    }
+    # planning_scene_monitor_parameters = {
+    #     "publish_planning_scene": True,
+    #     "publish_geometry_updates": True,
+    #     "publish_state_updates": True,
+    #     "publish_transforms_updates": True,
+    # }
 
     # Trajectory Execution Functionality
-    moveit_simple_controllers_yaml = load_yaml(
-        "reach_demo", "model/motoman_sia20d/config/moveit_controllers.yaml"
-    )
-    moveit_controllers = {
-        "moveit_simple_controller_manager": moveit_simple_controllers_yaml,
-        "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager",
-    }
+    # moveit_simple_controllers_yaml = load_yaml(
+    #     "reach_demo", "model/motoman_sia20d/config/moveit_controllers.yaml"
+    # )
+    # moveit_controllers = {
+    #     "moveit_simple_controller_manager": moveit_simple_controllers_yaml,
+    #     "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager",
+    # }
 
     # Planning Functionality
-    ompl_planning_pipeline_config = {
-        "move_group": {
-            "planning_plugin": "ompl_interface/OMPLPlanner",
-            "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
-            "start_state_max_bounds_error": 0.1,
-        }
-    }
-    ompl_planning_yaml = load_yaml(
-        "reach_demo", "model/motoman_sia20d/config/ompl_planning.yaml"
-    )
-    ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
+    # ompl_planning_pipeline_config = {
+    #     "move_group": {
+    #         "planning_plugin": "ompl_interface/OMPLPlanner",
+    #         "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
+    #         "start_state_max_bounds_error": 0.1,
+    #     }
+    # }
+    # ompl_planning_yaml = load_yaml(
+    #     "reach_demo", "model/motoman_sia20d/config/ompl_planning.yaml"
+    # )
+    # ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
 
     # Start the actual move_group node/action server
-    run_move_group_node = Node(
-        package="moveit_ros_move_group",
-        executable="move_group",
-        output="screen",
-        parameters=[
-            robot_description,
-            robot_description_semantic,
-            kinematics_yaml,
-            ompl_planning_pipeline_config,
-            trajectory_execution,
-            moveit_controllers,
-            planning_scene_monitor_parameters,
-        ],
-    )
+    # run_move_group_node = Node(
+    #     package="moveit_ros_move_group",
+    #     executable="move_group",
+    #     output="screen",
+    #     parameters=[
+    #         robot_description,
+    #         robot_description_semantic,
+    #         kinematics_yaml,
+    #         # ompl_planning_pipeline_config,
+    #         # trajectory_execution,
+    #         # moveit_controllers,
+    #         planning_scene_monitor_parameters,
+    #     ],
+    # )
 
     rviz_config_file = PathJoinSubstitution(
         [FindPackageShare("reach_core"), "rviz", "reach_study_config.rviz"]
@@ -207,17 +208,26 @@ def generate_launch_description():
         parameters=[
             robot_description,
             robot_description_semantic,
-            ompl_planning_pipeline_config,
+            # ompl_planning_pipeline_config,
             robot_description_kinematics,
             # robot_description_planning,
         ],
     )
 
-    nodes_to_run = [robot_reach_study_node,
-                    control_node,
+    load_point_cloud_server_node = Node(
+        package="reach_core",
+        executable="load_point_cloud_server_node",
+        name="load_point_cloud_server_node",
+        output="screen",
+        parameters=[]
+    )
+
+    nodes_to_run = [load_point_cloud_server_node,
+                    robot_reach_study_node,
+                    #control_node,
                     robot_state_publisher_node,
-                    joint_state_broadcaster_spawner,
-                    run_move_group_node,
+                    #joint_state_broadcaster_spawner,
+                    #run_move_group_node,
                     rviz_node]
 
     return LaunchDescription(declared_arguments + nodes_to_run)

@@ -54,7 +54,7 @@ bool MoveItReachDisplay::initialize(
                             collision_mesh_frame_) ||
       !node_->get_parameter(param_prefix + "marker_scale", marker_scale_)) {
     RCLCPP_ERROR(LOGGER,
-                 "MoveIt IK Solver Plugin is missing one or more configuration "
+                 "MoveIt Reach Display Plugin is missing one or more configuration "
                  "parameters");
     return false;
   }
