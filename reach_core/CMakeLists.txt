@@ -1,7 +1,15 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 project(reach_core)
 
-add_compile_options(-std=c++17)
+if(MSVC)
+    # required for some ament stuff in windows for some reason
+    # cmake_policy(SET CMP0057 NEW)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+    set(BUILD_SHARED_LIBS TRUE)
+    add_compile_options(/std:c++17)
+else()
+    add_compile_options(-std=c++17)
+endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_ros REQUIRED)
@@ -96,6 +104,9 @@ ament_target_dependencies(${PROJECT_NAME}_utils
   rclcpp
   visualization_msgs
 )
+ament_export_libraries(
+  ${PROJECT_NAME}_utils
+)
 
 
 # Reach Study Library
@@ -112,7 +123,7 @@ target_include_directories(${PROJECT_NAME}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_utils)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_utils ${PCL_LIBRARIES})
 ament_target_dependencies(${PROJECT_NAME}
   ${THIS_PACKAGE_INCLUDE_DEPENDS}
 )

@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define _USE_MATH_DEFINES
+#include <cmath>
+
 #include "tf2_eigen/tf2_eigen.h"
 
 #include <exception>
@@ -387,7 +390,10 @@ void ReachStudy::optimizeReachStudyResults() {
     previous_pct = 0;
 
     // Randomize
-    std::random_shuffle(rand_vec.begin(), rand_vec.end());
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    std::shuffle(rand_vec.begin(), rand_vec.end(), gen);
 
 #pragma parallel for
     for (std::size_t i = 0; i < rand_vec.size(); ++i) {

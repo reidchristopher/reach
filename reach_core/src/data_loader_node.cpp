@@ -61,11 +61,11 @@ bool get_all(
           std::pair<std::filesystem::path, std::filesystem::path> &second) {
         reach::core::ReachDatabase db;
         // first
-        db.load(first.second);
+        db.load(first.second.string());
         reach::core::StudyResults res = db.getStudyResults();
         float first_reach_percentage = res.reach_percentage;
         // second
-        db.load(second.second);
+        db.load(second.second.string());
         res = db.getStudyResults();
         float second_reach_percentage = res.reach_percentage;
         return first_reach_percentage > second_reach_percentage;

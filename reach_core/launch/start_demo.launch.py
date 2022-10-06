@@ -17,6 +17,7 @@ from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 import os
 import yaml
+import xacro
 
 
 def load_yaml(package_name, file_path):
@@ -81,8 +82,8 @@ def generate_launch_description():
     )
     robot_description_content = Command(
         [
-            PathJoinSubstitution([FindExecutable(name="xacro")]),
-            " ",
+            PathJoinSubstitution([FindExecutable(name="python")]),
+            " C:/opt/ros/foxy/x64/bin/xacro ",
             PathJoinSubstitution(
                 [FindPackageShare("reach_demo"), "model", LaunchConfiguration("robot_description_file")]
             ),
@@ -91,8 +92,8 @@ def generate_launch_description():
     # MoveIt Configuration
     robot_description_semantic_content = Command(
         [
-            PathJoinSubstitution([FindExecutable(name="xacro")]),
-            " ",
+            PathJoinSubstitution([FindExecutable(name="python")]),
+            " C:/opt/ros/foxy/x64/bin/xacro ",
             PathJoinSubstitution(
                 [FindPackageShare("reach_demo"), "model", robot_semantic_file]
             ),

@@ -1,7 +1,13 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 project(moveit_reach_plugins)
 
-add_compile_options(-std=c++17)
+if(MSVC)
+    add_compile_options(/std:c++17)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+    set(BUILD_SHARED_LIBS TRUE)
+else()
+    add_compile_options(-std=c++17)
+endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
