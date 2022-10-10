@@ -49,7 +49,6 @@ bool MoveItReachDisplay::initialize(
                             collision_mesh_package_) ||
       !node_->get_parameter(param_prefix + "collision_mesh_filename_path",
                             collision_mesh_filename_path_) ||
-      !node_->get_parameter(param_prefix + "fixed_frame", fixed_frame_) ||
       !node_->get_parameter(param_prefix + "collision_mesh_frame",
                             collision_mesh_frame_) ||
       !node_->get_parameter(param_prefix + "marker_scale", marker_scale_)) {
@@ -59,14 +58,14 @@ bool MoveItReachDisplay::initialize(
     return false;
   }
 
-  //    model_ = moveit::planning_interface::getSharedRobotModelLoader(node,
-  //    "robot_description")->getModel();
   model_ = model;
 
   if (!model_) {
     RCLCPP_ERROR(LOGGER, "Failed to initialize robot model pointer");
     return false;
   }
+
+  fixed_frame_ = model_->getModelFrame();
 
   jmg_ = model_->getJointModelGroup(planning_group);
   if (!jmg_) {

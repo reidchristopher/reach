@@ -85,6 +85,7 @@ class ReachStudy {
   bool compareDatabases();
 
   StudyParameters sp_;
+  std::string fixed_frame_;
 
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud_;
 

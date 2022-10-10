@@ -33,7 +33,6 @@ class RobotReachStudyNode : public rclcpp::Node {
   bool getStudyParameters(reach::core::StudyParameters& sp) {
     // fetch parameteres
     if (!this->get_parameter("config_name", sp_.config_name) ||
-        !this->get_parameter("fixed_frame", sp_.fixed_frame) ||
         !this->get_parameter("results_package", sp_.results_package) ||
         !this->get_parameter("results_directory", sp_.results_directory) ||
         !this->get_parameter("object_frame", sp_.object_frame) ||
@@ -59,8 +58,6 @@ class RobotReachStudyNode : public rclcpp::Node {
     } else {
       RCLCPP_INFO(rclcpp::get_logger("robot_reach_study_node"),
                   "config_name: '%s'", sp_.config_name.c_str());
-      RCLCPP_INFO(rclcpp::get_logger("robot_reach_study_node"),
-                  "fixed_frame: '%s'", sp_.fixed_frame.c_str());
       RCLCPP_INFO(rclcpp::get_logger("robot_reach_study_node"),
                   "results_package: '%s'", sp_.results_package.c_str());
       RCLCPP_INFO(rclcpp::get_logger("robot_reach_study_node"),

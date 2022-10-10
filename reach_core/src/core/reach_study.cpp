@@ -65,6 +65,7 @@ bool ReachStudy::initializeStudy(const StudyParameters &sp) {
   // create robot model shared ptr
   model_ = moveit::planning_interface::getSharedRobotModel(node_,
                                                            "robot_description");
+  fixed_frame_ = model_->getModelFrame();
 
   ps_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>(
       "pose_stamped", 1);
@@ -256,7 +257,7 @@ bool ReachStudy::getReachObjectPointCloud() {
   req->cloud_filename =
       ament_index_cpp::get_package_share_directory(sp_.pcd_package) + "/" +
       sp_.pcd_filename_path;
-  req->fixed_frame = sp_.fixed_frame;
+  req->fixed_frame = fixed_frame_;
   req->object_frame = sp_.object_frame;
 
   RCLCPP_INFO(LOGGER, "Waiting for service '%s'.", SAMPLE_MESH_SRV_TOPIC);
@@ -285,7 +286,7 @@ bool ReachStudy::getReachObjectPointCloud() {
   if (success_tmp) {
     pcl::fromROSMsg(cloud_msg_, *cloud_);
 
-    cloud_msg_.header.frame_id = sp_.fixed_frame;
+    cloud_msg_.header.frame_id = fixed_frame_;
     cloud_msg_.header.stamp = node_->now();
 
     return true;

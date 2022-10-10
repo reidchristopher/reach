@@ -104,7 +104,5 @@ Parameters:
   - The file path to the collision mesh model of the workpiece, in the `package://` or 'file://' URI format
 - **`collision_mesh_frame`**
   - The TF frame of reference of the collision mesh
-- **`fixed_frame`**
-  - The fixed TF frame in which to display the interactive markers
 - **`marker_scale`**
   - The length (in meters) of the arrow markers representing the target Cartesian points

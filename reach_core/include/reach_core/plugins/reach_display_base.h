@@ -61,6 +61,13 @@ class DisplayBase {
         REACH_DIFF_TOPIC, 1);
     marker_pub_ = node->create_publisher<visualization_msgs::msg::Marker>(
         MARKER_TOPIC, 1);
+
+    if (!model) {
+      RCLCPP_ERROR(LOGGER, "Empty model pointer based to reach display");
+      return false;
+    }
+
+    fixed_frame_ = model->getModelFrame();
     RCLCPP_INFO(LOGGER, "Initialized DisplayBase plugin!");
     return true;
   };
@@ -202,7 +209,7 @@ class DisplayBase {
   std::shared_ptr<rclcpp::Node> node_;
 
  protected:
-  std::string fixed_frame_ = "base";
+  std::string fixed_frame_;
 
   double marker_scale_ = 1.0;
 

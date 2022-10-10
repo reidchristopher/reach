@@ -1,7 +1,6 @@
 robot_reach_study_node:
   ros__parameters:
     config_name: "demo_config"
-    fixed_frame: "base_link"
     object_frame: "reach_object"
     results_package: "reach_demo"
     results_directory: "results"
@@ -46,5 +45,4 @@ robot_reach_study_node:
       collision_mesh_package: "reach_demo"
       collision_mesh_filename_path: "config/part.ply"
       collision_mesh_frame: "reach_object"
-      fixed_frame: "base_link"
       marker_scale: 0.05
