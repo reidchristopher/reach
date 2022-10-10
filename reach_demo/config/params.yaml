@@ -22,9 +22,8 @@ robot_reach_study_node:
       name: "moveit_reach_plugins/ik/MoveItIKSolver"
       distance_threshold: 0.0
       planning_group: "manipulator"
-#      collision_mesh_package: "reach_demo"
-      collision_mesh_package: "package://reach_demo/config/part.ply"
-      collision_mesh_filename_path: "NOT USED?"
+      collision_mesh_package: "reach_demo"
+      collision_mesh_filename_path: "config/part.ply"
       collision_mesh_frame: "reach_object"
       touch_links: [""]
       evaluation_plugin:
@@ -36,18 +35,16 @@ robot_reach_study_node:
           planning_group: "manipulator"
           distance_threshold: 0.025
           exponent: 2
-#          collision_mesh_package: "reach_demo"
           collision_mesh_package: "package://reach_demo/config/part.ply"
-          collision_mesh_filename_path: "NOT USED?"
-          collision_mesh_frame: "reach_object"
+          collision_mesh_package: "reach_demo"
+          collision_mesh_filename_path: "config/part.ply"
           touch_links: [""]
 
     display_config:
       name: "moveit_reach_plugins/display/MoveItReachDisplay"
       planning_group: "manipulator"
-#      collision_mesh_package: "reach_demo"
-      collision_mesh_package: "package://reach_demo/config/part.ply"
-      collision_mesh_filename_path: "NOT USED?"
+      collision_mesh_package: "reach_demo"
+      collision_mesh_filename_path: "config/part.ply"
       collision_mesh_frame: "reach_object"
       fixed_frame: "base_link"
       marker_scale: 0.05

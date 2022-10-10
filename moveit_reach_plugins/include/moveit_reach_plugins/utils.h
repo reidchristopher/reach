@@ -32,13 +32,16 @@ namespace utils {
 
 /**
  * @brief createCollisionObject
- * @param mesh_filename
+ * @param mesh_package
+ * @param mesh_filename_path
  * @param parent_link
  * @param object_name
  * @return
  */
 moveit_msgs::msg::CollisionObject createCollisionObject(
-    const std::string &mesh_filename, const std::string &parent_link,
+    const std::string &mesh_package,
+    const std::string &mesh_filename_path,
+    const std::string &parent_link,
     const std::string &object_name);
 
 /**

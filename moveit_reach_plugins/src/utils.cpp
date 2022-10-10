@@ -35,19 +35,22 @@ const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_reach_plugins.utils");
 namespace utils {
 
 moveit_msgs::msg::CollisionObject createCollisionObject(
-    const std::string &mesh_filename, const std::string &parent_link,
-    const std::string &object_name) {
+    const std::string &mesh_package, const std::string &mesh_filename_path,
+    const std::string &parent_link, const std::string &object_name) {
   // Create a CollisionObject message for the reach object
   RCLCPP_INFO(LOGGER,
-              "Creating collision object with mesh_filename: '%s', "
+              "Creating collision object with mesh_package: '%s', "
+              "mesh_filename_path: '%s', "
               "parent_link: '%s', object_name: '%s'",
-              mesh_filename.c_str(), parent_link.c_str(), object_name.c_str());
+              mesh_package.c_str(), mesh_filename_path.c_str(),
+              parent_link.c_str(), object_name.c_str());
 
   moveit_msgs::msg::CollisionObject obj;
   obj.header.frame_id = parent_link;
   obj.id = object_name;
   shapes::ShapeMsg shape_msg;
-  shapes::Mesh *mesh = shapes::createMeshFromResource(mesh_filename);
+  std::string mesh_full_path = "package://" + mesh_package + "/" + mesh_filename_path;
+  shapes::Mesh *mesh = shapes::createMeshFromResource(mesh_full_path);
   if (!mesh) {
     RCLCPP_ERROR(LOGGER, "Creating Mesh From Resource failed...");
   }

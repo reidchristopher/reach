@@ -99,7 +99,7 @@ bool DistancePenaltyMoveIt::initialize(
   const std::string object_name = "reach_object";
 
   moveit_msgs::msg::CollisionObject obj = utils::createCollisionObject(
-      collision_mesh_package_, collision_mesh_frame_, object_name);
+      collision_mesh_package_, collision_mesh_filename_path_, collision_mesh_frame_, object_name);
   if (!scene_->processCollisionObjectMsg(obj)) {
     RCLCPP_ERROR(LOGGER, "Failed to add collision mesh to planning scene");
     return false;
