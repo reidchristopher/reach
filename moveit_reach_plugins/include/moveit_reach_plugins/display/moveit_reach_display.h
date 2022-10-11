@@ -61,6 +61,7 @@ class MoveItReachDisplay : public reach::plugins::DisplayBase {
   std::string collision_mesh_frame_;
 
   rclcpp::Publisher<moveit_msgs::msg::PlanningScene>::SharedPtr scene_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr obj_pub_;
 };
 
 }  // namespace display

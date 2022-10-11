@@ -36,6 +36,7 @@
 constexpr char SAMPLE_MESH_SRV_TOPIC[] = "sample_mesh";
 const static double SRV_TIMEOUT = 5.0;
 constexpr char INPUT_CLOUD_TOPIC[] = "input_cloud";
+constexpr char REACH_OBJ_TOPIC[] = "reach_object";
 constexpr char SAVED_DB_NAME[] = "reach.db";
 constexpr char OPT_SAVED_DB_NAME[] = "optimized_reach.db";
 
@@ -146,10 +147,9 @@ bool ReachStudy::run(const StudyParameters &sp) {
 
   // Show the reach object collision object and reach object point cloud
   if (sp_.visualize_results) {
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub =
-        node_->create_publisher<sensor_msgs::msg::PointCloud2>(
-            INPUT_CLOUD_TOPIC, 1);
-    pub->publish(cloud_msg_);
+    cloud_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>(
+            INPUT_CLOUD_TOPIC, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+    cloud_pub_->publish(cloud_msg_);
   }
 
   // Create markers

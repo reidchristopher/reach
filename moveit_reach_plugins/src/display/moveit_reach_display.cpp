@@ -27,6 +27,7 @@
 #include <moveit/robot_state/conversions.h>
 
 const static std::string PLANNING_SCENE_TOPIC = "planning_scene_display";
+const static std::string REACH_OBJ_TOPIC = "reach_object";
 
 namespace moveit_reach_plugins {
 namespace display {
@@ -98,7 +99,28 @@ bool MoveItReachDisplay::initialize(
   }
 
   scene_pub_ = node_->create_publisher<moveit_msgs::msg::PlanningScene>(
-      PLANNING_SCENE_TOPIC, 1);
+      PLANNING_SCENE_TOPIC, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+
+  obj_pub_ = node_->create_publisher<visualization_msgs::msg::Marker>(
+        REACH_OBJ_TOPIC, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+
+  visualization_msgs::msg::Marker obj_msg;
+  
+  obj_msg.header.frame_id = collision_mesh_frame_;
+  obj_msg.header.stamp = node_->get_clock()->now();
+  obj_msg.ns = "reach_obj";
+  obj_msg.id = 0;
+  obj_msg.type = obj_msg.MESH_RESOURCE;
+  obj_msg.action = obj_msg.ADD;
+  obj_msg.pose.orientation.w = 1.0;
+  obj_msg.scale.x = 1.0;
+  obj_msg.scale.y = 1.0;
+  obj_msg.scale.z = 1.0;
+  obj_msg.color.a = 1.0;
+  obj_msg.color.g = 1.0;
+  obj_msg.mesh_resource = "package://" + collision_mesh_package_ + "/" + collision_mesh_filename_path_;
+
+  obj_pub_->publish(obj_msg);
 
   RCLCPP_INFO_STREAM(LOGGER,
                      "Successfully initialized MoveItReachDisplay plugin");

@@ -109,6 +109,8 @@ class ReachStudy {
 
   std::shared_ptr<rclcpp::Node> node_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ps_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr obj_pub_;
 
   // robot model
   moveit::core::RobotModelConstPtr model_;
