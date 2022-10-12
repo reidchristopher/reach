@@ -48,11 +48,13 @@ const rclcpp::Logger LOGGER = rclcpp::get_logger("reach_core.reach_database");
 reach_msgs::msg::ReachRecord makeRecord(
     const std::string &id, const bool reached,
     const geometry_msgs::msg::Pose &goal,
+    const std::string &group_name,
     const sensor_msgs::msg::JointState &seed_state,
     const sensor_msgs::msg::JointState &goal_state, const double score) {
   reach_msgs::msg::ReachRecord r;
   r.id = id;
   r.goal = goal;
+  r.planning_group = group_name;
   r.reached = reached;
   r.seed_state = seed_state;
   r.goal_state = goal_state;

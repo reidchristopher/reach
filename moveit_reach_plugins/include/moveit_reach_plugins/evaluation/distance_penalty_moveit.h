@@ -40,12 +40,12 @@ class DistancePenaltyMoveIt : public reach::plugins::EvaluationBase {
       const std::shared_ptr<const moveit::core::RobotModel> model) override;
 
   virtual double calculateScore(
-      const std::map<std::string, double>& pose) override;
+      const std::map<std::string, double>& pose, const std::string& group_name) override;
 
  private:
   moveit::core::RobotModelConstPtr model_;
 
-  const moveit::core::JointModelGroup* jmg_;
+    std::map<std::string, const moveit::core::JointModelGroup*> joint_model_groups_;
 
   planning_scene::PlanningScenePtr scene_;
 

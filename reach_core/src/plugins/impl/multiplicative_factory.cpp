@@ -81,10 +81,10 @@ bool MultiplicativeFactory::initialize(
 }
 
 double MultiplicativeFactory::calculateScore(
-    const std::map<std::string, double> &pose) {
+    const std::map<std::string, double> &pose, const std::string& group_name) {
   double score = 1.0;
   for (const EvaluationBasePtr &plugin : eval_plugins_) {
-    score *= plugin->calculateScore(pose);
+    score *= plugin->calculateScore(pose, group_name);
   }
   return score;
 }

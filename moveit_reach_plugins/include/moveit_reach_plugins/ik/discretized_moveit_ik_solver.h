@@ -33,6 +33,7 @@ class DiscretizedMoveItIKSolver : public MoveItIKSolver {
   virtual std::optional<double> solveIKFromSeed(
       const Eigen::Isometry3d& target,
       const std::map<std::string, double>& seed,
+      const std::string& group_name,
       std::vector<double>& solution) override;
 
  protected:

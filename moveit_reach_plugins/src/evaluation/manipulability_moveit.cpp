@@ -29,15 +29,15 @@ ManipulabilityMoveIt::ManipulabilityMoveIt()
 bool ManipulabilityMoveIt::initialize(
     std::string& name, rclcpp::Node::SharedPtr node,
     const std::shared_ptr<const moveit::core::RobotModel> model) {
-  std::string planning_group;
+  std::vector<std::string> planning_groups;
 
   std::string param_prefix(
       "ik_solver_config.evaluation_plugin.moveit_reach_plugins/evaluation/"
       "ManipulabilityMoveIt.");
-  if (!node->get_parameter(param_prefix + "planning_group", planning_group)) {
+  if (!node->get_parameter(param_prefix + "planning_groups", planning_groups)) {
     RCLCPP_ERROR(LOGGER,
                  "MoveIt Manipulability Evaluation Plugin is missing "
-                 "'planning_group' parameter");
+                 "'planning_groups' parameter");
     return false;
   }
   //  model_ = moveit::planning_interface::getSharedRobotModelLoader(node,
@@ -48,10 +48,14 @@ bool ManipulabilityMoveIt::initialize(
     return false;
   }
 
-  jmg_ = model_->getJointModelGroup(planning_group);
-  if (!jmg_) {
-    RCLCPP_ERROR(LOGGER, "Failed to initialize joint model group pointer");
-    return false;
+  for (const std::string& group_name : planning_groups) {
+    auto jmg = model_->getJointModelGroup(group_name);
+    if (!jmg) {
+      RCLCPP_ERROR_STREAM(LOGGER, "Failed to get joint model group for '"
+                                      << group_name << "'");
+      return false;
+    }
+    joint_model_groups_.insert({group_name, jmg});
   }
 
   RCLCPP_INFO(LOGGER,
@@ -61,24 +65,25 @@ bool ManipulabilityMoveIt::initialize(
 }
 
 double ManipulabilityMoveIt::calculateScore(
-    const std::map<std::string, double>& pose) {
+    const std::map<std::string, double>& pose, const std::string& group_name) {
   // Calculate manipulability of kinematic chain of input robot pose
   moveit::core::RobotState state(model_);
+  auto jmg = joint_model_groups_.at(group_name);
 
   // Take the subset of joints in the joint model group out of the input pose
   std::vector<double> pose_subset;
-  if (!utils::transcribeInputMap(pose, jmg_->getActiveJointModelNames(),
+  if (!utils::transcribeInputMap(pose, jmg->getActiveJointModelNames(),
                                  pose_subset)) {
     RCLCPP_ERROR_STREAM(
         LOGGER, __FUNCTION__ << ": failed to transcribe input pose map");
     return 0.0f;
   }
 
-  state.setJointGroupPositions(jmg_, pose_subset);
+  state.setJointGroupPositions(jmg, pose_subset);
   state.update();
 
   // Get the Jacobian matrix
-  Eigen::MatrixXd jacobian = state.getJacobian(jmg_);
+  Eigen::MatrixXd jacobian = state.getJacobian(jmg);
 
   // Calculate manipulability by multiplying Jacobian matrix singular values
   // together

@@ -21,6 +21,7 @@
 #include <exception>
 #include <filesystem>
 #include <numeric>
+#include <random>
 
 #include <rclcpp/callback_group.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -36,7 +37,6 @@
 constexpr char SAMPLE_MESH_SRV_TOPIC[] = "sample_mesh";
 const static double SRV_TIMEOUT = 5.0;
 constexpr char INPUT_CLOUD_TOPIC[] = "input_cloud";
-constexpr char REACH_OBJ_TOPIC[] = "reach_object";
 constexpr char SAVED_DB_NAME[] = "reach.db";
 constexpr char OPT_SAVED_DB_NAME[] = "optimized_reach.db";
 
@@ -54,7 +54,13 @@ ReachStudy::ReachStudy(const rclcpp::Node::SharedPtr node)
       cloud_(new pcl::PointCloud<pcl::PointNormal>()),
       db_(new ReachDatabase()),
       solver_loader_(PACKAGE, IK_BASE_CLASS),
-      display_loader_(PACKAGE, DISPLAY_BASE_CLASS) {}
+      display_loader_(PACKAGE, DISPLAY_BASE_CLASS) {
+  ps_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>(
+      "pose_stamped", 1);
+  cloud_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>(
+        INPUT_CLOUD_TOPIC, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+}
+
 ReachStudy::~ReachStudy() {
   ik_solver_.reset();
   display_.reset();
@@ -67,9 +73,6 @@ bool ReachStudy::initializeStudy(const StudyParameters &sp) {
   model_ = moveit::planning_interface::getSharedRobotModel(node_,
                                                            "robot_description");
   fixed_frame_ = model_->getModelFrame();
-
-  ps_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>(
-      "pose_stamped", 1);
 
   try {
     ik_solver_ = solver_loader_.createSharedInstance(sp_.ik_solver_config_name);
@@ -147,8 +150,6 @@ bool ReachStudy::run(const StudyParameters &sp) {
 
   // Show the reach object collision object and reach object point cloud
   if (sp_.visualize_results) {
-    cloud_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>(
-            INPUT_CLOUD_TOPIC, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
     cloud_pub_->publish(cloud_msg_);
   }
 
@@ -307,7 +308,7 @@ void ReachStudy::runInitialReachStudy() {
   current_counter = previous_pct = 0;
   const int cloud_size = static_cast<int>(cloud_->points.size());
 
-#pragma omp parallel for
+  #pragma omp parallel for
   for (int i = 0; i < cloud_size; ++i) {
     // Get pose from point cloud array
     const pcl::PointNormal &pt = cloud_->points[i];
@@ -316,46 +317,106 @@ void ReachStudy::runInitialReachStudy() {
         utils::createFrame(pt.getArray3fMap(), pt.getNormalVector3fMap());
     tgt_frame = tgt_frame * tool_z_rot;
 
-    // Get the seed position
-    sensor_msgs::msg::JointState seed_state;
-    seed_state.name = ik_solver_->getJointNames();
-    seed_state.position = std::vector<double>(seed_state.name.size(), 0.0);
+    for (const std::string& group_name : sp_.planning_groups)
+    { 
+      // Get the seed position
+      sensor_msgs::msg::JointState seed_state;
+      seed_state.name = ik_solver_->getJointNames(group_name);
+      seed_state.position = std::vector<double>(seed_state.name.size(), 0.0);
 
-    // Solve IK
-    std::vector<double> solution;
-    std::optional<double> score = ik_solver_->solveIKFromSeed(
-        tgt_frame, jointStateMsgToMap(seed_state), solution);
+      // Solve IK
+      std::vector<double> solution;
+      std::optional<double> score = ik_solver_->solveIKFromSeed(
+          tgt_frame, jointStateMsgToMap(seed_state), group_name, solution);
 
-    // Create objects to save in the reach record
-    geometry_msgs::msg::Pose tgt_pose;
-    tgt_pose = tf2::toMsg(tgt_frame);
+      double top_score = -std::numeric_limits<double>::max();
+      reach_msgs::msg::ReachRecord top_score_record;
 
-    sensor_msgs::msg::JointState goal_state(seed_state);
+      geometry_msgs::msg::Pose tgt_pose;
+      tgt_pose = tf2::toMsg(tgt_frame);
+      for (const std::string& group_name : sp_.planning_groups) {
+        // Get the seed position
+        sensor_msgs::msg::JointState seed_state;
+        seed_state.name = ik_solver_->getJointNames(group_name);
+        seed_state.position = std::vector<double>(seed_state.name.size(), 0.0);
 
-    if (score) {
-      geometry_msgs::msg::PoseStamped tgt_pose_stamped;
-      tgt_pose_stamped.pose = tgt_pose;
-      tgt_pose_stamped.header.frame_id = cloud_msg_.header.frame_id;
-      ps_pub_->publish(tgt_pose_stamped);
+        // Solve IK
+        std::vector<double> solution;
+        std::optional<double> score = ik_solver_->solveIKFromSeed(
+            tgt_frame, jointStateMsgToMap(seed_state), group_name, solution);
 
-      std::map<std::string, double> robot_configuration;
-      // create map
-      std::transform(
-          goal_state.name.begin(), goal_state.name.end(), solution.begin(),
-          std::inserter(robot_configuration, robot_configuration.end()),
-          [](std::string &jname, double jvalue) {
-            return std::make_pair(jname, jvalue);
-          });
+        // Create objects to save in the reach record
+        sensor_msgs::msg::JointState goal_state(seed_state);
 
-      display_->updateRobotPose(robot_configuration);
-      goal_state.position = solution;
-      auto msg = makeRecord(std::to_string(i), true, tgt_pose, seed_state,
-                            goal_state, *score);
-      db_->put(msg);
-    } else {
-      auto msg = makeRecord(std::to_string(i), false, tgt_pose, seed_state,
-                            goal_state, 0.0);
-      db_->put(msg);
+        if (score) {
+          if (*score > top_score) {
+            if (sp_.visualize_results) {
+              geometry_msgs::msg::PoseStamped tgt_pose_stamped;
+              tgt_pose_stamped.pose = tgt_pose;
+              tgt_pose_stamped.header.frame_id = cloud_msg_.header.frame_id;
+              ps_pub_->publish(tgt_pose_stamped);
+            }
+            if (top_score != -std::numeric_limits<double>::max()) {
+              RCLCPP_WARN_STREAM(LOGGER, "OVERWRITING AT " << tgt_frame.translation().matrix());
+              // rclcpp::sleep_for(std::chrono::seconds(5));
+            }
+
+            std::map<std::string, double> robot_configuration;
+            // create map
+            std::transform(
+                goal_state.name.begin(), goal_state.name.end(), solution.begin(),
+                std::inserter(robot_configuration, robot_configuration.end()),
+                [](std::string &jname, double jvalue) {
+                  return std::make_pair(jname, jvalue);
+                });
+
+            display_->updateRobotPose(robot_configuration, group_name);
+            goal_state.position = solution;
+            top_score = *score;
+            top_score_record = makeRecord(std::to_string(i), true, tgt_pose, group_name,
+                                          seed_state, goal_state, *score);
+          }
+        }
+        else if (top_score_record.id == "") {
+          top_score_record = makeRecord(std::to_string(i), false, tgt_pose, 
+                                        group_name, seed_state, goal_state, 0.0);
+        }
+      }
+
+      db_->put(top_score_record);
+
+        // // Create objects to save in the reach record
+        // geometry_msgs::msg::Pose tgt_pose;
+        // tgt_pose = tf2::toMsg(tgt_frame);
+
+        // sensor_msgs::msg::JointState goal_state(seed_state);
+
+        // if (score) {
+        //   geometry_msgs::msg::PoseStamped tgt_pose_stamped;
+        //   tgt_pose_stamped.pose = tgt_pose;
+        //   tgt_pose_stamped.header.frame_id = cloud_msg_.header.frame_id;
+        //   ps_pub_->publish(tgt_pose_stamped);
+
+        //   std::map<std::string, double> robot_configuration;
+        //   // create map
+        //   std::transform(
+        //       goal_state.name.begin(), goal_state.name.end(), solution.begin(),
+        //       std::inserter(robot_configuration, robot_configuration.end()),
+        //       [](std::string &jname, double jvalue) {
+        //         return std::make_pair(jname, jvalue);
+        //       });
+
+        //   display_->updateRobotPose(robot_configuration, group_name);
+        //   goal_state.position = solution;
+        //   auto msg = makeRecord(std::to_string(i), true, tgt_pose, group_name,
+        //                         seed_state, goal_state, *score);
+        //   db_->put(msg);
+        // } else {
+        //   auto msg = makeRecord(std::to_string(i), false, tgt_pose, group_name, seed_state,
+        //                         goal_state, 0.0);
+        //   db_->put(msg);
+        // }
+      
     }
 
     // Print function progress

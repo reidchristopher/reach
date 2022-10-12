@@ -86,8 +86,9 @@ void ReachVisualizer::reSolveIKCB(
 
     // Re-solve IK at the selected marker
     std::vector<double> goal_pose;
+    // !!!!!!!!!!!!!!!!!!!!!!! TODO
     std::optional<double> score =
-        solver_->solveIKFromSeed(target, seed_map, goal_pose);
+        solver_->solveIKFromSeed(target, seed_map, lookup->planning_group, goal_pose);
 
     // Update the database if the IK solution was valid
     if (score) {
@@ -99,7 +100,7 @@ void ReachVisualizer::reSolveIKCB(
 
       // Update the interactive marker server
       display_->updateInteractiveMarker(*lookup);
-      display_->updateRobotPose(jointStateMsgToMap(lookup->goal_state));
+      display_->updateRobotPose(jointStateMsgToMap(lookup->goal_state), lookup->planning_group);
 
       // Update the database
       db_->put(*lookup);
@@ -118,7 +119,7 @@ void ReachVisualizer::showResultCB(
         &fb) {
   auto lookup = db_->get(fb->marker_name);
   if (lookup) {
-    display_->updateRobotPose(jointStateMsgToMap(lookup->goal_state));
+    display_->updateRobotPose(jointStateMsgToMap(lookup->goal_state), lookup->planning_group);
   } else {
     RCLCPP_ERROR_STREAM(LOGGER,
                         "Record '" << fb->marker_name
@@ -131,7 +132,7 @@ void ReachVisualizer::showSeedCB(
         &fb) {
   auto lookup = db_->get(fb->marker_name);
   if (lookup) {
-    display_->updateRobotPose(jointStateMsgToMap(lookup->seed_state));
+    display_->updateRobotPose(jointStateMsgToMap(lookup->seed_state), lookup->planning_group);
   } else {
     RCLCPP_ERROR_STREAM(LOGGER,
                         "Record '" << fb->marker_name
@@ -147,7 +148,7 @@ void ReachVisualizer::reachNeighborsDirectCB(
     NeighborReachResult result = reachNeighborsDirect(
         db_, *lookup, solver_, neighbor_radius_, search_tree_);
 
-    display_->updateRobotPose(jointStateMsgToMap(lookup->goal_state));
+    display_->updateRobotPose(jointStateMsgToMap(lookup->goal_state), lookup->planning_group);
     display_->publishMarkerArray(result.reached_pts);
 
     RCLCPP_INFO(LOGGER, "%lu points are reachable from this pose",
@@ -169,7 +170,7 @@ void ReachVisualizer::reachNeighborsRecursiveCB(
     reachNeighborsRecursive(db_, *lookup, solver_, neighbor_radius_, result,
                             search_tree_);
 
-    display_->updateRobotPose(jointStateMsgToMap(lookup->goal_state));
+    display_->updateRobotPose(jointStateMsgToMap(lookup->goal_state), lookup->planning_group);
     display_->publishMarkerArray(result.reached_pts);
     RCLCPP_INFO(LOGGER, "%lu points are reachable from this pose",
                 result.reached_pts.size());

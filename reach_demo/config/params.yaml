@@ -9,7 +9,7 @@ robot_reach_study_node:
     get_avg_neighbor_count: false
     compare_dbs: [""]
     visualize_results: true
-    planning_group: "manipulator"
+    planning_groups: ["manipulator"]
     run_initial_study_only: false
 
     optimization:
@@ -20,7 +20,7 @@ robot_reach_study_node:
     ik_solver_config:
       name: "moveit_reach_plugins/ik/MoveItIKSolver"
       distance_threshold: 0.0
-      planning_group: "manipulator"
+      planning_groups: ["manipulator"]
       collision_mesh_package: "reach_demo"
       collision_mesh_filename_path: "config/part.ply"
       collision_mesh_frame: "reach_object"
@@ -29,9 +29,9 @@ robot_reach_study_node:
         name: "reach_core/plugins/MultiplicativeFactory"
         plugins: ["moveit_reach_plugins/evaluation/ManipulabilityMoveIt", "moveit_reach_plugins/evaluation/DistancePenaltyMoveIt"]
         moveit_reach_plugins/evaluation/ManipulabilityMoveIt:
-          planning_group: "manipulator"
+          planning_groups: ["manipulator"]
         moveit_reach_plugins/evaluation/DistancePenaltyMoveIt:
-          planning_group: "manipulator"
+          planning_groups: ["manipulator"]
           distance_threshold: 0.025
           exponent: 2
           collision_mesh_package: "package://reach_demo/config/part.ply"
@@ -41,7 +41,7 @@ robot_reach_study_node:
 
     display_config:
       name: "moveit_reach_plugins/display/MoveItReachDisplay"
-      planning_group: "manipulator"
+      planning_groups: ["manipulator"]
       collision_mesh_package: "reach_demo"
       collision_mesh_filename_path: "config/part.ply"
       collision_mesh_frame: "reach_object"

@@ -41,6 +41,7 @@ namespace core {
 reach_msgs::msg::ReachRecord makeRecord(
     const std::string &id, const bool reached,
     const geometry_msgs::msg::Pose &goal,
+    const std::string &group_name,
     const sensor_msgs::msg::JointState &seed_state,
     const sensor_msgs::msg::JointState &goal_state, const double score);
 

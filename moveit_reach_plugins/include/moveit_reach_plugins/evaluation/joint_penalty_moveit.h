@@ -34,16 +34,14 @@ class JointPenaltyMoveIt : public reach::plugins::EvaluationBase {
       const std::shared_ptr<const moveit::core::RobotModel> model) override;
 
   virtual double calculateScore(
-      const std::map<std::string, double>& pose) override;
+      const std::map<std::string, double>& pose, const std::string& group_name) override;
 
  private:
-  std::vector<std::vector<double>> getJointLimits();
+  std::vector<std::vector<double>> getJointLimits(const std::string& group_name);
 
   moveit::core::RobotModelConstPtr model_;
 
-  const moveit::core::JointModelGroup* jmg_;
-
-  std::vector<std::vector<double>> joint_limits_;
+    std::map<std::string, const moveit::core::JointModelGroup*> joint_model_groups_;
 };
 
 }  // namespace evaluation

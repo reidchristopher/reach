@@ -36,9 +36,9 @@ bool MoveItIKSolver::initialize(
     const std::shared_ptr<const moveit::core::RobotModel> model) {
   node_ = node;
 
-  std::string planning_group;
+  std::vector<std::string> planning_groups;
 
-  if (!node->get_parameter("ik_solver_config.planning_group", planning_group) ||
+  if (!node->get_parameter("ik_solver_config.planning_groups", planning_groups) ||
       !node->get_parameter("ik_solver_config.distance_threshold",
                            distance_threshold_) ||
       !node->get_parameter("ik_solver_config.collision_mesh_package",
@@ -85,11 +85,14 @@ bool MoveItIKSolver::initialize(
     return false;
   }
 
-  jmg_ = model_->getJointModelGroup(planning_group);
-  if (!jmg_) {
-    RCLCPP_ERROR_STREAM(LOGGER, "Failed to get joint model group for '"
-                                    << planning_group << "'");
-    return false;
+  for (const std::string& group_name : planning_groups) {
+    auto jmg = model_->getJointModelGroup(group_name);
+    if (!jmg) {
+      RCLCPP_ERROR_STREAM(LOGGER, "Failed to get joint model group for '"
+                                      << group_name << "'");
+      return false;
+    }
+    joint_model_groups_.insert({group_name, jmg});
   }
 
   scene_ = std::make_shared<planning_scene::PlanningScene>(model_);
@@ -123,11 +126,12 @@ bool MoveItIKSolver::initialize(
 
 std::optional<double> MoveItIKSolver::solveIKFromSeed(
     const Eigen::Isometry3d& target, const std::map<std::string, double>& seed,
-    std::vector<double>& solution) {
+    const std::string& group_name, std::vector<double>& solution) {
   moveit::core::RobotState state(model_);
 
+  auto jmg = joint_model_groups_.at(group_name);
   const std::vector<std::string>& joint_names =
-      jmg_->getActiveJointModelNames();
+      jmg->getActiveJointModelNames();
 
   std::vector<double> seed_subset;
   if (!utils::transcribeInputMap(seed, joint_names, seed_subset)) {
@@ -136,18 +140,18 @@ std::optional<double> MoveItIKSolver::solveIKFromSeed(
     return {};
   }
 
-  state.setJointGroupPositions(jmg_, seed_subset);
+  state.setJointGroupPositions(jmg, seed_subset);
   state.update();
 
   //  const static int SOLUTION_ATTEMPTS = 3;
   const static double SOLUTION_TIMEOUT = 0.2;
 
-  if (state.setFromIK(jmg_, target, SOLUTION_TIMEOUT,
+  if (state.setFromIK(jmg, target, SOLUTION_TIMEOUT,
                       std::bind(&MoveItIKSolver::isIKSolutionValid, this,
                                 std::placeholders::_1, std::placeholders::_2,
                                 std::placeholders::_3))) {
     solution.clear();
-    state.copyJointGroupPositions(jmg_, solution);
+    state.copyJointGroupPositions(jmg, solution);
 
     // Convert back to map
     std::map<std::string, double> solution_map;
@@ -155,7 +159,7 @@ std::optional<double> MoveItIKSolver::solveIKFromSeed(
       solution_map.emplace(joint_names[i], solution[i]);
     }
 
-    return eval_->calculateScore(solution_map);
+    return eval_->calculateScore(solution_map, group_name);
   } else {
     return {};
   }
@@ -182,8 +186,9 @@ bool MoveItIKSolver::isIKSolutionValid(moveit::core::RobotState* state,
   return (!colliding && !too_close);
 }
 
-std::vector<std::string> MoveItIKSolver::getJointNames() const {
-  return jmg_->getActiveJointModelNames();
+std::vector<std::string> MoveItIKSolver::getJointNames(const std::string& group_name) const {
+  auto jmg = joint_model_groups_.at(group_name);
+  return jmg->getActiveJointModelNames();
 }
 
 }  // namespace ik

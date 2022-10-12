@@ -107,7 +107,7 @@ NeighborReachResult reachNeighborsDirect(
       // Use current point's IK solution as seed
       std::vector<double> new_solution;
       std::optional<double> score =
-          solver->solveIKFromSeed(target, previous_solution, new_solution);
+          solver->solveIKFromSeed(target, previous_solution, rec.planning_group, new_solution);
 
       if (score) {
         // Change database if currently solved point didn't have solution before
@@ -169,7 +169,7 @@ void reachNeighborsRecursive(ReachDatabasePtr db,
 
         // Use current point's IK solution as seed
         std::optional<double> score =
-            solver->solveIKFromSeed(target, current_pose_map, new_pose);
+            solver->solveIKFromSeed(target, current_pose_map, rec.planning_group, new_pose);
         if (score) {
           // Calculate the joint distance between the seed and new goal states
           for (std::size_t j = 0; j < current_pose.size(); ++j) {

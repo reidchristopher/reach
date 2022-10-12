@@ -46,9 +46,10 @@ class EvaluationBase {
   /**
    * @brief calculateScore
    * @param pose
+   * @param group_name
    * @return
    */
-  virtual double calculateScore(const std::map<std::string, double>& pose) = 0;
+  virtual double calculateScore(const std::map<std::string, double>& pose, const std::string& group_name) = 0;
 };
 
 typedef std::shared_ptr<EvaluationBase> EvaluationBasePtr;

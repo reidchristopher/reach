@@ -30,12 +30,12 @@ DistancePenaltyMoveIt::DistancePenaltyMoveIt()
 bool DistancePenaltyMoveIt::initialize(
     std::string& name, rclcpp::Node::SharedPtr node,
     const std::shared_ptr<const moveit::core::RobotModel> model) {
-  std::string planning_group;
+  std::vector<std::string> planning_groups;
 
   if (!node->get_parameter(
           "ik_solver_config.evaluation_plugin.moveit_reach_plugins/evaluation/"
-          "DistancePenaltyMoveIt.planning_group",
-          planning_group) ||
+          "DistancePenaltyMoveIt.planning_groups",
+          planning_groups) ||
       !node->get_parameter(
           "ik_solver_config.evaluation_plugin.moveit_reach_plugins/evaluation/"
           "DistancePenaltyMoveIt.distance_threshold",
@@ -79,10 +79,14 @@ bool DistancePenaltyMoveIt::initialize(
     return false;
   }
 
-  jmg_ = model_->getJointModelGroup(planning_group);
-  if (!jmg_) {
-    RCLCPP_ERROR(LOGGER, "Failed to initialize joint model group pointer");
-    return false;
+  for (const std::string& group_name : planning_groups) {
+    auto jmg = model_->getJointModelGroup(group_name);
+    if (!jmg) {
+      RCLCPP_ERROR_STREAM(LOGGER, "Failed to get joint model group for '"
+                                      << group_name << "'");
+      return false;
+    }
+    joint_model_groups_.insert({group_name, jmg});
   }
 
   scene_ = std::make_shared<planning_scene::PlanningScene>(model_);
@@ -112,10 +116,11 @@ bool DistancePenaltyMoveIt::initialize(
 }
 
 double DistancePenaltyMoveIt::calculateScore(
-    const std::map<std::string, double>& pose) {
+    const std::map<std::string, double>& pose, const std::string& group_name) {
   // Pull the joints from the planning group out of the input pose map
   std::vector<double> pose_subset;
-  if (!utils::transcribeInputMap(pose, jmg_->getActiveJointModelNames(),
+  auto jmg = joint_model_groups_.at(group_name);
+  if (!utils::transcribeInputMap(pose, jmg->getActiveJointModelNames(),
                                  pose_subset)) {
     RCLCPP_ERROR_STREAM(
         LOGGER, __FUNCTION__ << ": failed to transcribe input pose map");
@@ -123,7 +128,7 @@ double DistancePenaltyMoveIt::calculateScore(
   }
 
   moveit::core::RobotState state(model_);
-  state.setJointGroupPositions(jmg_, pose_subset);
+  state.setJointGroupPositions(jmg, pose_subset);
   state.update();
 
   const double dist =

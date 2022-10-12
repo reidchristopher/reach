@@ -28,15 +28,15 @@ JointPenaltyMoveIt::JointPenaltyMoveIt() : reach::plugins::EvaluationBase() {}
 bool JointPenaltyMoveIt::initialize(
     std::string& name, rclcpp::Node::SharedPtr node,
     const std::shared_ptr<const moveit::core::RobotModel> model) {
-  std::string planning_group;
+  std::vector<std::string> planning_groups;
 
   std::string param_prefix(
       "ik_solver_config.evaluation_plugin.moveit_reach_plugins/evaluation/"
       "JointPenaltyMoveIt.");
-  if (!node->get_parameter(param_prefix + "planning_group", planning_group)) {
+  if (!node->get_parameter(param_prefix + "planning_groups", planning_groups)) {
     RCLCPP_ERROR(LOGGER,
                  "MoveIt Joint Penalty Evaluation Plugin is missing "
-                 "'planning_group' parameter");
+                 "'planning_groups' parameter");
     return false;
   }
 
@@ -49,26 +49,29 @@ bool JointPenaltyMoveIt::initialize(
     return false;
   }
 
-  jmg_ = model_->getJointModelGroup(planning_group);
-  if (!jmg_) {
-    RCLCPP_ERROR(LOGGER, "Failed to initialize joint model group pointer");
-    return false;
+  for (const std::string& group_name : planning_groups) {
+    auto jmg = model_->getJointModelGroup(group_name);
+    if (!jmg) {
+      RCLCPP_ERROR_STREAM(LOGGER, "Failed to get joint model group for '"
+                                      << group_name << "'");
+      return false;
+    }
+    joint_model_groups_.insert({group_name, jmg});
   }
-
-  joint_limits_ = getJointLimits();
 
   return true;
 }
 
 double JointPenaltyMoveIt::calculateScore(
-    const std::map<std::string, double>& pose) {
-  std::vector<double> max, min;
-  min = joint_limits_[0];
-  max = joint_limits_[1];
+    const std::map<std::string, double>& pose, const std::string& group_name) {
+  auto jmg = joint_model_groups_.at(group_name);
+  std::vector<std::vector<double>> joint_limits = getJointLimits(group_name);
+  std::vector<double>& min = joint_limits[0];
+  std::vector<double>& max = joint_limits[1];
 
   // Pull the joints from the planning group out of the input pose map
   std::vector<double> pose_subset;
-  if (!utils::transcribeInputMap(pose, jmg_->getActiveJointModelNames(),
+  if (!utils::transcribeInputMap(pose, jmg->getActiveJointModelNames(),
                                  pose_subset)) {
     RCLCPP_ERROR_STREAM(
         LOGGER, __FUNCTION__ << ": failed to transcribe input pose map");
@@ -84,10 +87,11 @@ double JointPenaltyMoveIt::calculateScore(
   return std::max(0.0, 1.0 - std::exp(-1.0 * penalty));
 }
 
-std::vector<std::vector<double>> JointPenaltyMoveIt::getJointLimits() {
+std::vector<std::vector<double>> JointPenaltyMoveIt::getJointLimits(const std::string& group_name) {
   std::vector<double> max, min;
   // Get joint limits
-  const auto limits_vec = jmg_->getActiveJointModelsBounds();
+  auto jmg = joint_model_groups_.at(group_name);
+  const auto limits_vec = jmg->getActiveJointModelsBounds();
   for (std::size_t i = 0; i < limits_vec.size(); ++i) {
     const auto& bounds_vec = *limits_vec[i];
     if (bounds_vec.size() > 1) {

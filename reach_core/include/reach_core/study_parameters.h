@@ -45,8 +45,6 @@ struct StudyOptimization {
  * reach study
  */
 struct StudyParameters {
-  //  XmlRpc::XmlRpcValue ik_solver_config;
-  //  XmlRpc::XmlRpcValue display_config;
   std::string ik_solver_config_name;
   std::string display_config_name;
   StudyOptimization optimization;
@@ -59,7 +57,7 @@ struct StudyParameters {
   bool get_neighbors;
   std::vector<std::string> compare_dbs;
   std::string object_frame;
-  std::string planning_group;
+  std::vector<std::string> planning_groups;
   bool run_initial_study_only;
 };
 

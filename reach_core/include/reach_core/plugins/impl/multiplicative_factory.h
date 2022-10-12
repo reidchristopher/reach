@@ -37,7 +37,7 @@ class MultiplicativeFactory : public EvaluationBase {
       std::shared_ptr<const moveit::core::RobotModel> model) override;
 
   virtual double calculateScore(
-      const std::map<std::string, double> &pose) override;
+      const std::map<std::string, double> &pose, const std::string& group_name) override;
 
  private:
   std::vector<EvaluationBasePtr> eval_plugins_;

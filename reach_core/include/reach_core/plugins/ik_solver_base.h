@@ -59,13 +59,14 @@ class IKSolverBase {
   virtual std::optional<double> solveIKFromSeed(
       const Eigen::Isometry3d &target,
       const std::map<std::string, double> &seed,
+      const std::string& group_name,
       std::vector<double> &solution) = 0;
 
   /**
    * @brief getJointNames
    * @return
    */
-  virtual std::vector<std::string> getJointNames() const = 0;
+  virtual std::vector<std::string> getJointNames(const std::string& group_name) const = 0;
 
  public:
   rclcpp::Node::SharedPtr node_;

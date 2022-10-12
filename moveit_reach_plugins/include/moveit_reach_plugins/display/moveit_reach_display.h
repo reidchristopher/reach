@@ -47,14 +47,14 @@ class MoveItReachDisplay : public reach::plugins::DisplayBase {
                                const std::vector<double>& positions) override;
 
   virtual void updateRobotPose(
-      const std::map<std::string, double>& pose) override;
+      const std::map<std::string, double>& pose, const std::string& group_name) override;
 
  private:
   moveit::core::RobotModelConstPtr model_;
 
   planning_scene::PlanningScenePtr scene_;
 
-  const moveit::core::JointModelGroup* jmg_;
+  std::map<std::string, const moveit::core::JointModelGroup*> joint_model_groups_;
 
   std::string collision_mesh_package_;
   std::string collision_mesh_filename_path_;

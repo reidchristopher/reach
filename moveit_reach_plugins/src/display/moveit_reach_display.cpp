@@ -43,9 +43,9 @@ bool MoveItReachDisplay::initialize(
   }
 
   std::string param_prefix("display_config.");
-  std::string planning_group;
+  std::vector<std::string> planning_groups;
 
-  if (!node_->get_parameter(param_prefix + "planning_group", planning_group) ||
+  if (!node_->get_parameter(param_prefix + "planning_groups", planning_groups) ||
       !node_->get_parameter(param_prefix + "collision_mesh_package",
                             collision_mesh_package_) ||
       !node_->get_parameter(param_prefix + "collision_mesh_filename_path",
@@ -68,11 +68,14 @@ bool MoveItReachDisplay::initialize(
 
   fixed_frame_ = model_->getModelFrame();
 
-  jmg_ = model_->getJointModelGroup(planning_group);
-  if (!jmg_) {
-    RCLCPP_ERROR_STREAM(LOGGER, "Failed to get joint model group for '"
-                                    << planning_group << "'");
-    return false;
+  for (const std::string& group_name : planning_groups) {
+    auto jmg =  model_->getJointModelGroup(group_name);
+    if (!jmg) {
+      RCLCPP_ERROR_STREAM(LOGGER, "Failed to get joint model group for '"
+                                      << group_name << "'");
+      return false;
+    }
+    joint_model_groups_.insert({group_name, jmg});
   }
 
   scene_ = std::make_shared<planning_scene::PlanningScene>(model_);
@@ -134,8 +137,9 @@ void MoveItReachDisplay::showEnvironment() {
 }
 
 void MoveItReachDisplay::updateRobotPose(
-    const std::map<std::string, double>& pose) {
-  std::vector<std::string> joint_names = jmg_->getActiveJointModelNames();
+    const std::map<std::string, double>& pose, const std::string& group_name) {
+  auto jmg = joint_model_groups_.at(group_name);
+  std::vector<std::string> joint_names = jmg->getActiveJointModelNames();
 
   std::vector<double> joints;
   if (utils::transcribeInputMap(pose, joint_names, joints)) {
