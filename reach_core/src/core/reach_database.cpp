@@ -125,8 +125,8 @@ std::size_t ReachDatabase::size() const { return map_.size(); }
 void ReachDatabase::calculateResults() {
   unsigned int success = 0, total = 0;
   double score = 0.0;
-  for (int i = 0; i < this->size(); ++i) {
-    reach_msgs::msg::ReachRecord msg = *this->get(std::to_string(i));
+  for (auto elem : map_) {
+    reach_msgs::msg::ReachRecord msg = elem.second;
 
     if (msg.reached) {
       success++;

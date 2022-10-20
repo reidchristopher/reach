@@ -310,6 +310,7 @@ void ReachStudy::runInitialReachStudy() {
 
   #pragma omp parallel for
   for (int i = 0; i < cloud_size; ++i) {
+    bool has_success = false;
     // Get pose from point cloud array
     const pcl::PointNormal &pt = cloud_->points[i];
     Eigen::Isometry3d tgt_frame;
@@ -317,106 +318,61 @@ void ReachStudy::runInitialReachStudy() {
         utils::createFrame(pt.getArray3fMap(), pt.getNormalVector3fMap());
     tgt_frame = tgt_frame * tool_z_rot;
 
-    for (const std::string& group_name : sp_.planning_groups)
-    { 
+    geometry_msgs::msg::Pose tgt_pose;
+    tgt_pose = tf2::toMsg(tgt_frame);
+
+    double top_score = -std::numeric_limits<double>::max();
+    // reach_msgs::msg::ReachRecord record;
+
+    for (const std::string& group_name : sp_.planning_groups) {
       // Get the seed position
       sensor_msgs::msg::JointState seed_state;
       seed_state.name = ik_solver_->getJointNames(group_name);
       seed_state.position = std::vector<double>(seed_state.name.size(), 0.0);
+
+      sensor_msgs::msg::JointState goal_state(seed_state);
 
       // Solve IK
       std::vector<double> solution;
       std::optional<double> score = ik_solver_->solveIKFromSeed(
           tgt_frame, jointStateMsgToMap(seed_state), group_name, solution);
 
-      double top_score = -std::numeric_limits<double>::max();
-      reach_msgs::msg::ReachRecord top_score_record;
-
-      geometry_msgs::msg::Pose tgt_pose;
-      tgt_pose = tf2::toMsg(tgt_frame);
-      for (const std::string& group_name : sp_.planning_groups) {
-        // Get the seed position
-        sensor_msgs::msg::JointState seed_state;
-        seed_state.name = ik_solver_->getJointNames(group_name);
-        seed_state.position = std::vector<double>(seed_state.name.size(), 0.0);
-
-        // Solve IK
-        std::vector<double> solution;
-        std::optional<double> score = ik_solver_->solveIKFromSeed(
-            tgt_frame, jointStateMsgToMap(seed_state), group_name, solution);
-
-        // Create objects to save in the reach record
-        sensor_msgs::msg::JointState goal_state(seed_state);
-
-        if (score) {
-          if (*score > top_score) {
-            if (sp_.visualize_results) {
-              geometry_msgs::msg::PoseStamped tgt_pose_stamped;
-              tgt_pose_stamped.pose = tgt_pose;
-              tgt_pose_stamped.header.frame_id = cloud_msg_.header.frame_id;
-              ps_pub_->publish(tgt_pose_stamped);
-            }
-            if (top_score != -std::numeric_limits<double>::max()) {
-              RCLCPP_WARN_STREAM(LOGGER, "OVERWRITING AT " << tgt_frame.translation().matrix());
-              // rclcpp::sleep_for(std::chrono::seconds(5));
-            }
-
-            std::map<std::string, double> robot_configuration;
-            // create map
-            std::transform(
-                goal_state.name.begin(), goal_state.name.end(), solution.begin(),
-                std::inserter(robot_configuration, robot_configuration.end()),
-                [](std::string &jname, double jvalue) {
-                  return std::make_pair(jname, jvalue);
-                });
-
-            display_->updateRobotPose(robot_configuration, group_name);
-            goal_state.position = solution;
-            top_score = *score;
-            top_score_record = makeRecord(std::to_string(i), true, tgt_pose, group_name,
-                                          seed_state, goal_state, *score);
-          }
+      if (score) {
+        if (!has_success){
+          has_success = true;
         }
-        else if (top_score_record.id == "") {
-          top_score_record = makeRecord(std::to_string(i), false, tgt_pose, 
-                                        group_name, seed_state, goal_state, 0.0);
+        if (*score > top_score) {
+          if (sp_.visualize_results) {
+            geometry_msgs::msg::PoseStamped tgt_pose_stamped;
+            tgt_pose_stamped.pose = tgt_pose;
+            tgt_pose_stamped.header.frame_id = cloud_msg_.header.frame_id;
+            ps_pub_->publish(tgt_pose_stamped);
+          }
+
+          std::map<std::string, double> robot_configuration;
+          // create map
+          std::transform(
+              goal_state.name.begin(), goal_state.name.end(), solution.begin(),
+              std::inserter(robot_configuration, robot_configuration.end()),
+              [](std::string &jname, double jvalue) {
+                return std::make_pair(jname, jvalue);
+              });
+
+          display_->updateRobotPose(robot_configuration, group_name);
+          goal_state.position = solution;
+          top_score = *score;
+          reach_msgs::msg::ReachRecord record;
+          record = makeRecord(std::to_string(i), true, tgt_pose, group_name,
+                              seed_state, goal_state, *score);
+          db_->put(record);
         }
       }
-
-      db_->put(top_score_record);
-
-        // // Create objects to save in the reach record
-        // geometry_msgs::msg::Pose tgt_pose;
-        // tgt_pose = tf2::toMsg(tgt_frame);
-
-        // sensor_msgs::msg::JointState goal_state(seed_state);
-
-        // if (score) {
-        //   geometry_msgs::msg::PoseStamped tgt_pose_stamped;
-        //   tgt_pose_stamped.pose = tgt_pose;
-        //   tgt_pose_stamped.header.frame_id = cloud_msg_.header.frame_id;
-        //   ps_pub_->publish(tgt_pose_stamped);
-
-        //   std::map<std::string, double> robot_configuration;
-        //   // create map
-        //   std::transform(
-        //       goal_state.name.begin(), goal_state.name.end(), solution.begin(),
-        //       std::inserter(robot_configuration, robot_configuration.end()),
-        //       [](std::string &jname, double jvalue) {
-        //         return std::make_pair(jname, jvalue);
-        //       });
-
-        //   display_->updateRobotPose(robot_configuration, group_name);
-        //   goal_state.position = solution;
-        //   auto msg = makeRecord(std::to_string(i), true, tgt_pose, group_name,
-        //                         seed_state, goal_state, *score);
-        //   db_->put(msg);
-        // } else {
-        //   auto msg = makeRecord(std::to_string(i), false, tgt_pose, group_name, seed_state,
-        //                         goal_state, 0.0);
-        //   db_->put(msg);
-        // }
-      
+      else if (!has_success) {
+        reach_msgs::msg::ReachRecord record;
+        record = makeRecord(std::to_string(i), false, tgt_pose,
+                            group_name, seed_state, goal_state, 0.0);
+        db_->put(record);
+      }
     }
 
     // Print function progress
@@ -457,8 +413,8 @@ void ReachStudy::optimizeReachStudyResults() {
 
     std::shuffle(rand_vec.begin(), rand_vec.end(), gen);
 
-#pragma parallel for
-    for (std::size_t i = 0; i < rand_vec.size(); ++i) {
+#pragma omp parallel for
+    for (int i = 0; i < rand_vec.size(); ++i) {
       auto it = db_->begin();
       std::advance(it, rand_vec[i]);
       reach_msgs::msg::ReachRecord msg = it->second;
@@ -498,8 +454,10 @@ void ReachStudy::getAverageNeighborsCount() {
   std::atomic<double> total_joint_distance;
   const int total = db_->size();
   // Iterate
-#pragma parallel for
-  for (auto it = db_->begin(); it != db_->end(); ++it) {
+#pragma omp parallel for
+  for (int i = 0; i < db_->size(); ++i) {
+    auto it = db_->begin();
+    std::advance(it, i);
     reach_msgs::msg::ReachRecord msg = it->second;
     if (msg.reached) {
       NeighborReachResult result;

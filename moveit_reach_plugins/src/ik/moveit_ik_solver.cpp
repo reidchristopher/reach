@@ -129,6 +129,12 @@ std::optional<double> MoveItIKSolver::solveIKFromSeed(
     const std::string& group_name, std::vector<double>& solution) {
   moveit::core::RobotState state(model_);
 
+  // set all joints to 0 to avoid collisions from previous solutions of different manipulator groups
+  for (const std::string& name : state.getVariableNames()) {
+    state.setVariablePosition(name, 0.0);
+  }
+  state.update();
+
   auto jmg = joint_model_groups_.at(group_name);
   const std::vector<std::string>& joint_names =
       jmg->getActiveJointModelNames();

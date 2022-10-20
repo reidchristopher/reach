@@ -112,7 +112,7 @@ NeighborReachResult reachNeighborsDirect(
       if (score) {
         // Change database if currently solved point didn't have solution before
         // or if its current manipulability is better than that saved in the
-        // databas
+        // database
         reach_msgs::msg::ReachRecord msg = neighbors[i];
 
         if (!msg.reached || (*score > msg.score)) {
