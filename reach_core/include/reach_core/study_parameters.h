@@ -49,6 +49,7 @@ struct StudyParameters {
   std::string display_config_name;
   StudyOptimization optimization;
   std::string config_name;
+  bool overwrite;
   std::string results_package;
   std::string results_directory;
   std::string pcd_package;

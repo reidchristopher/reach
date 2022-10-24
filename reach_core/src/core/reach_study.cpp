@@ -158,24 +158,57 @@ bool ReachStudy::run(const StudyParameters &sp) {
       new ReachVisualizer(db_, ik_solver_, display_, sp_.optimization.radius));
 
   // Attempt to load previously saved optimized reach_study database
-  if (!db_->load(results_dir_ + OPT_SAVED_DB_NAME)) {
-    RCLCPP_INFO(LOGGER, "Unable to load optimized database at '%s'!",
-                (results_dir_ + OPT_SAVED_DB_NAME).c_str());
-    // Attempt to load previously saved initial reach study database
-    if (!db_->load(results_dir_ + SAVED_DB_NAME)) {
-      RCLCPP_INFO(LOGGER, "------------------------------");
-      RCLCPP_INFO(LOGGER, "No reach study database loaded");
-      RCLCPP_INFO(LOGGER, "------------------------------");
 
-      // Run the first pass of the reach study
-      runInitialReachStudy();
+  bool run_new_study = sp_.overwrite;
+  if (!sp_.overwrite) {
+    // Attempt to load previously saved initial reach study database
+    run_new_study = !db_->load(results_dir_ + SAVED_DB_NAME);
+    if (run_new_study)
+    {
+      RCLCPP_INFO(LOGGER, "Unable to load unoptimized database at '%s'!",
+            (results_dir_ + SAVED_DB_NAME).c_str());
+    }
+  }
+  else {
+    run_new_study = true;
+  }
+
+  if (run_new_study) {
+     
+    RCLCPP_INFO(LOGGER, "------------------------------");
+    RCLCPP_INFO(LOGGER, "No reach study database loaded");
+    RCLCPP_INFO(LOGGER, "------------------------------");
+
+    // Run the first pass of the reach study
+    runInitialReachStudy();
+    db_->printResults();
+    visualizer_->update();
+    // check if we don't have to optimize
+    if (sp.run_initial_study_only) {
+      return true;
+    }
+
+    // Create an efficient search tree for doing nearest neighbors search
+      search_tree_.reset(new SearchTree(flann::KDTreeSingleIndexParams(1, true)));
+
+      flann::Matrix<double> dataset(new double[db_->size() * 3], db_->size(), 3);
+      for (std::size_t i = 0; i < db_->size(); ++i) {
+        auto it = db_->begin();
+        std::advance(it, i);
+
+        dataset[i][0] = static_cast<double>(it->second.goal.position.x);
+        dataset[i][1] = static_cast<double>(it->second.goal.position.y);
+        dataset[i][2] = static_cast<double>(it->second.goal.position.z);
+      }
+      search_tree_->buildIndex(dataset);
+
+      // Run the optimization
+      optimizeReachStudyResults();
       db_->printResults();
       visualizer_->update();
-      // check if we don't have to optimize
-      if (sp.run_initial_study_only) {
-        return true;
-      }
-    } else {
+
+  } else {
+    if (!db_->load(results_dir_ + OPT_SAVED_DB_NAME)) {
       RCLCPP_INFO(LOGGER,
                   "----------------------------------------------------");
       RCLCPP_INFO(LOGGER,
@@ -189,33 +222,33 @@ bool ReachStudy::run(const StudyParameters &sp) {
       if (sp.run_initial_study_only) {
         return true;
       }
+
+      // Create an efficient search tree for doing nearest neighbors search
+      search_tree_.reset(new SearchTree(flann::KDTreeSingleIndexParams(1, true)));
+
+      flann::Matrix<double> dataset(new double[db_->size() * 3], db_->size(), 3);
+      for (std::size_t i = 0; i < db_->size(); ++i) {
+        auto it = db_->begin();
+        std::advance(it, i);
+
+        dataset[i][0] = static_cast<double>(it->second.goal.position.x);
+        dataset[i][1] = static_cast<double>(it->second.goal.position.y);
+        dataset[i][2] = static_cast<double>(it->second.goal.position.z);
+      }
+      search_tree_->buildIndex(dataset);
+
+      // Run the optimization
+      optimizeReachStudyResults();
+      db_->printResults();
+      visualizer_->update();
+    } else {
+      RCLCPP_INFO(LOGGER, "--------------------------------------------------");
+      RCLCPP_INFO(LOGGER, "Optimized reach study database successfully loaded");
+      RCLCPP_INFO(LOGGER, "--------------------------------------------------");
+
+      db_->printResults();
+      visualizer_->update();
     }
-
-    // Create an efficient search tree for doing nearest neighbors search
-    search_tree_.reset(new SearchTree(flann::KDTreeSingleIndexParams(1, true)));
-
-    flann::Matrix<double> dataset(new double[db_->size() * 3], db_->size(), 3);
-    for (std::size_t i = 0; i < db_->size(); ++i) {
-      auto it = db_->begin();
-      std::advance(it, i);
-
-      dataset[i][0] = static_cast<double>(it->second.goal.position.x);
-      dataset[i][1] = static_cast<double>(it->second.goal.position.y);
-      dataset[i][2] = static_cast<double>(it->second.goal.position.z);
-    }
-    search_tree_->buildIndex(dataset);
-
-    // Run the optimization
-    optimizeReachStudyResults();
-    db_->printResults();
-    visualizer_->update();
-  } else {
-    RCLCPP_INFO(LOGGER, "--------------------------------------------------");
-    RCLCPP_INFO(LOGGER, "Optimized reach study database successfully loaded");
-    RCLCPP_INFO(LOGGER, "--------------------------------------------------");
-
-    db_->printResults();
-    visualizer_->update();
   }
 
   // Find the average number of neighboring points can be reached by the robot
@@ -243,6 +276,11 @@ bool ReachStudy::run(const StudyParameters &sp) {
   display_.reset();
 
   return true;
+}
+
+ConstReachDatabasePtr ReachStudy::getDatabase()
+{
+  return ConstReachDatabasePtr(db_);
 }
 
 bool ReachStudy::getReachObjectPointCloud() {

@@ -71,6 +71,8 @@ class ReachStudy {
     return node_;
   }
 
+  ConstReachDatabasePtr getDatabase();
+
  private:
   bool initializeStudy(const StudyParameters &sp);
 

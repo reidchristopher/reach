@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.8)
 project(reach_core)
 
 if(MSVC)
-    # required for some ament stuff in windows for some reason
-    # cmake_policy(SET CMP0057 NEW)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
     set(BUILD_SHARED_LIBS TRUE)
     add_compile_options(/std:c++17)

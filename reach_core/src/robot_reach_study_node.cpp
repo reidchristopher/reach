@@ -33,6 +33,7 @@ class RobotReachStudyNode : public rclcpp::Node {
   bool getStudyParameters(reach::core::StudyParameters& sp) {
     // fetch parameteres
     if (!this->get_parameter("config_name", sp_.config_name) ||
+        !this->get_parameter("overwrite", sp_.overwrite) ||
         !this->get_parameter("results_package", sp_.results_package) ||
         !this->get_parameter("results_directory", sp_.results_directory) ||
         !this->get_parameter("object_frame", sp_.object_frame) ||

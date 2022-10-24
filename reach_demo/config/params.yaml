@@ -1,6 +1,7 @@
 robot_reach_study_node:
   ros__parameters:
     config_name: "demo_config"
+    overwrite: false
     object_frame: "reach_object"
     results_package: "reach_demo"
     results_directory: "results"

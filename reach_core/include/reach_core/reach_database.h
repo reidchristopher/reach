@@ -162,6 +162,7 @@ class ReachDatabase {
   StudyResults results_;
 };
 typedef std::shared_ptr<ReachDatabase> ReachDatabasePtr;
+typedef std::shared_ptr<const ReachDatabase> ConstReachDatabasePtr;
 
 }  // namespace core
 }  // namespace reach
